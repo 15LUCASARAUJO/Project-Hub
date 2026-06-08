@@ -114,7 +114,7 @@ This project is licensed under the **MIT License** — see the [LICENSE.md](LICE
 
   <!-- <img src="https://img.shields.io/badge/Status-Planejamento-lightgrey?style=for-the-badge&logo=blueprint" alt="Planejamento">-->
    <!-- <img src="https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange?style=for-the-badge&logo=visualstudiocode" alt="Em Desenvolvimento"> -->
-  <img src="https://img.shields.io/badge/Status-Concluído-brightgreen?style=for-the-badge&logo=checkmarx" alt="Concluído"> -->
+  <img src="https://img.shields.io/badge/Status-Concluído-brightgreen?style=for-the-badge&logo=checkmarx" alt="Concluído">
   <!-- <img src="https://img.shields.io/badge/Status-Manutenção-blue?style=for-the-badge&logo=wrench" alt="Manutenção"> -->
 
   <br>
