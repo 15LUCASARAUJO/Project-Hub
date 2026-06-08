@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ProjectHub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="header">
+  <div class="header-brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    </div>
+    ProjectHub
+  </div>
+  <button class="btn btn-primary" onclick="openNewProject()">
+    <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Novo projeto
+  </button>
+</header>
+<div class="container">
+  <div class="page-header">
+    <h1 class="page-title">Projetos</h1>
+  </div>
+  <div class="stats-row" id="stats"></div>
+  <div class="filters" id="filters">
+    <button class="fchip active" onclick="setFilter('all',this)">Todos</button>
+    <button class="fchip" onclick="setFilter('active',this)">Ativos</button>
+    <button class="fchip" onclick="setFilter('paused',this)">Pausados</button>
+    <button class="fchip" onclick="setFilter('done',this)">Concluídos</button>
+    <button class="fchip" onclick="setFilter('high',this)">Alta prior.</button>
+  </div>
+  <div class="projects-grid" id="grid"></div>
+</div>
+<!-- MODAL -->
+<div class="modal-ov" id="proj-modal">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Novo Projeto</div>
+    <div class="fgroup">
+      <label class="flabel">Nome</label>
+      <input class="fin" id="f-name" placeholder="Nome do projeto">
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Descrição</label>
+      <textarea class="fin" id="f-desc" placeholder="Breve descrição..."></textarea>
+    </div>
+    <div class="frow">
+      <div class="fgroup">
+        <label class="flabel">Categoria</label>
+        <input class="fin" id="f-cat" placeholder="Web, Mobile...">
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Status</label>
+        <select class="fin" id="f-status">
+          <option value="active">Em andamento</option>
+          <option value="paused">Pausado</option>
+          <option value="done">Concluído</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fgroup">
+        <label class="flabel">Prioridade</label>
+        <select class="fin" id="f-priority">
+          <option value="high">Alta</option>
+          <option value="medium">Média</option>
+          <option value="low">Baixa</option>
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Progresso (%)</label>
+        <input class="fin" id="f-progress" type="number" min="0" max="100" placeholder="0">
+      </div>
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Cor</label>
+      <div class="color-picker" id="cpicker"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveProject()">Salvar</button>
+    </div>
+  </div>
+</div>
+<!-- CONFIRM -->
+<div class="conf-ov" id="conf-ov">
+  <div class="conf-box">
+    <div class="conf-title">Excluir projeto?</div>
+    <div class="conf-msg">Esta ação não pode ser desfeita.</div>
+    <div class="conf-actions">
+      <button class="btn btn-secondary" onclick="closeConf()">Cancelar</button>
+      <button class="btn btn-danger" onclick="doDelete()">Excluir</button>
+    </div>
+  </div>
+</div>
+<div class="toast-wrap" id="toasts"></div>
+<script src="script.js"></script>
+</body>
+</html>
