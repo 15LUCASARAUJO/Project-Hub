@@ -3,9 +3,9 @@
   <h1>Project Hub</h1>
   <p><b>Created to manage and administer various projects, it functions as a project library, with updates and progress tracking.</b></p>
 
-  <img src="https://img.shields.io/badge/Status-Planning-lightgrey?style=for-the-badge&logo=blueprint" alt="Planning">
+  <!--<img src="https://img.shields.io/badge/Status-Planning-lightgrey?style=for-the-badge&logo=blueprint" alt="Planning">-->
   <!-- <img src="https://img.shields.io/badge/Status-Developing-orange?style=for-the-badge&logo=visualstudiocode" alt="Developing"> -->
-  <!--<img src="https://img.shields.io/badge/Status-Completed-brightgreen?style=for-the-badge&logo=checkmarx" alt="Completed"> -->
+  <img src="https://img.shields.io/badge/Status-Completed-brightgreen?style=for-the-badge&logo=checkmarx" alt="Completed"> 
   <!-- <img src="https://img.shields.io/badge/Status-Maintenance-blue?style=for-the-badge&logo=wrench" alt="Maintenance"> -->
 
   <br>
@@ -34,11 +34,11 @@ The **Project Hub** it was designed to meet the need to record personal projects
 
 ## Features
 
-- [ ] **Field to add projects, which go to a library with various filter options**
-- [ ] **Updated dashboard with information collected from the projects**
-- [ ] **Kanban board with classification by status**
-- [ ] **Timeline with deadline dates**
-- [ ] **Home page with projects, where it is possible to add links, tasks and notes, among other project information**
+- [X] **Field to add projects, which go to a library with various filter options**
+- [X] **Updated dashboard with information collected from the projects**
+- [X] **Kanban board with classification by status**
+- [X] **Timeline with deadline dates**
+- [X] **Home page with projects, where it is possible to add links, tasks and notes, among other project information**
 
 ---
 
@@ -112,9 +112,9 @@ This project is licensed under the **MIT License** — see the [LICENSE.md](LICE
   <h1>Hub de Projetos</h1>
   <p><b>Criado para administrar e gerir diversos projetos, funciona como uma biblioteca de projetos, com atualização e progresso.</b></p>
 
-  <img src="https://img.shields.io/badge/Status-Planejamento-lightgrey?style=for-the-badge&logo=blueprint" alt="Planejamento">
+  <!-- <img src="https://img.shields.io/badge/Status-Planejamento-lightgrey?style=for-the-badge&logo=blueprint" alt="Planejamento">-->
    <!-- <img src="https://img.shields.io/badge/Status-Em%20Desenvolvimento-orange?style=for-the-badge&logo=visualstudiocode" alt="Em Desenvolvimento"> -->
-  <!-- <img src="https://img.shields.io/badge/Status-Concluído-brightgreen?style=for-the-badge&logo=checkmarx" alt="Concluído"> -->
+  <img src="https://img.shields.io/badge/Status-Concluído-brightgreen?style=for-the-badge&logo=checkmarx" alt="Concluído"> -->
   <!-- <img src="https://img.shields.io/badge/Status-Manutenção-blue?style=for-the-badge&logo=wrench" alt="Manutenção"> -->
 
   <br>
@@ -143,11 +143,11 @@ O **Hub de Projetos** foi pensado para suprir a necessidade de registrar os proj
 
 ## Funcionalidades
 
-- [ ] **Campo para adicionar projetos, que vão para uma biblioteca com opções diversas de filtros**
-- [ ] **Dashboard atualizado com as informações coletadas dos projetos**
-- [ ] **Kanban com classificação por status**
-- [ ] **Timeline com datas de prazo**
-- [ ] **Home com os projetos, onde é possível adicionar links, tarefas e anotações, entre outras informações de projeto**
+- [X] **Campo para adicionar projetos, que vão para uma biblioteca com opções diversas de filtros**
+- [X] **Dashboard atualizado com as informações coletadas dos projetos**
+- [X] **Kanban com classificação por status**
+- [X] **Timeline com datas de prazo**
+- [X] **Home com os projetos, onde é possível adicionar links, tarefas e anotações, entre outras informações de projeto**
 
 ---
 
