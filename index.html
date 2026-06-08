@@ -2,46 +2,91 @@
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f7f6f3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)">
 <title>ProjectHub</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/teste/style.css">
 </head>
 <body>
-<header class="header">
-  <div class="header-brand">
-    <div class="brand-icon">
-      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+<div class="app" id="app">
+  <div class="sidebar-ov" id="sidebar-ov" onclick="closeSidebar()"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <span class="brand-name">ProjectHub</span>
     </div>
-    ProjectHub
-  </div>
-  <button class="btn btn-primary" onclick="openNewProject()">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Menu</div>
+      <button class="nav-item active" onclick="navigate('dashboard')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-item" onclick="navigate('projects')">
+        <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        Projetos
+      </button>
+      <button class="nav-item" onclick="navigate('kanban')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="11" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
+        Kanban
+      </button>
+      <button class="nav-item" onclick="navigate('timeline')">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Timeline
+      </button>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Projetos</div>
+    </div>
+    <div class="sidebar-projs" id="sb-projs"></div>
+    <div class="sidebar-foot">
+      <button class="dm-btn" onclick="toggleDark()">
+        <svg id="dm-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <span id="dm-label">Modo escuro</span>
+      </button>
+      <div style="height:8px"></div>
+      <button class="btn-new" onclick="openNewProject()">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo Projeto
+      </button>
+    </div>
+  </aside>
+  <main class="main" id="main"></main>
+  <nav class="bottom-nav" id="bottom-nav">
+    <div class="bnav-item active" id="bn-dashboard" onclick="navigate('dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </div>
+    <div class="bnav-item" id="bn-projects" onclick="navigate('projects')">
+      <svg viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+      Projetos
+    </div>
+    <div class="bnav-item" id="bn-kanban" onclick="navigate('kanban')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="11" rx="1"/><rect x="17" y="3" width="5" height="15" rx="1"/></svg>
+      Kanban
+    </div>
+    <div class="bnav-item" id="bn-timeline" onclick="navigate('timeline')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Timeline
+    </div>
+  </nav>
+  <button class="fab" onclick="openNewProject()" aria-label="Novo projeto">
     <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Novo projeto
   </button>
-</header>
-<div class="container">
-  <div class="page-header">
-    <h1 class="page-title">Projetos</h1>
-  </div>
-  <div class="stats-row" id="stats"></div>
-  <div class="filters" id="filters">
-    <button class="fchip active" onclick="setFilter('all',this)">Todos</button>
-    <button class="fchip" onclick="setFilter('active',this)">Ativos</button>
-    <button class="fchip" onclick="setFilter('paused',this)">Pausados</button>
-    <button class="fchip" onclick="setFilter('done',this)">Concluídos</button>
-    <button class="fchip" onclick="setFilter('high',this)">Alta prior.</button>
-  </div>
-  <div class="projects-grid" id="grid"></div>
 </div>
-<!-- MODAL -->
+<!-- MODAL PROJETO -->
 <div class="modal-ov" id="proj-modal">
   <div class="modal">
+    <span class="modal-drag"></span>
     <div class="modal-title" id="modal-title">Novo Projeto</div>
     <div class="fgroup">
-      <label class="flabel">Nome</label>
-      <input class="fin" id="f-name" placeholder="Nome do projeto">
+      <label class="flabel">Nome <span class="kbd">Enter</span> para salvar, <span class="kbd">Esc</span> para cancelar</label>
+      <input class="fin" id="f-name" placeholder="Ex: Site institucional">
     </div>
     <div class="fgroup">
       <label class="flabel">Descrição</label>
@@ -58,6 +103,7 @@
           <option value="active">Em andamento</option>
           <option value="paused">Pausado</option>
           <option value="done">Concluído</option>
+          <option value="archived">Arquivado</option>
         </select>
       </div>
     </div>
@@ -75,8 +121,18 @@
         <input class="fin" id="f-progress" type="number" min="0" max="100" placeholder="0">
       </div>
     </div>
+    <div class="frow">
+      <div class="fgroup">
+        <label class="flabel">Início</label>
+        <input class="fin" id="f-start" type="date">
+      </div>
+      <div class="fgroup">
+        <label class="flabel">Prazo</label>
+        <input class="fin" id="f-end" type="date">
+      </div>
+    </div>
     <div class="fgroup">
-      <label class="flabel">Cor</label>
+      <label class="flabel">Cor do projeto</label>
       <div class="color-picker" id="cpicker"></div>
     </div>
     <div class="modal-actions">
@@ -85,17 +141,19 @@
     </div>
   </div>
 </div>
-<!-- CONFIRM -->
+<!-- CONFIRM DELETE -->
 <div class="conf-ov" id="conf-ov">
   <div class="conf-box">
-    <div class="conf-title">Excluir projeto?</div>
-    <div class="conf-msg">Esta ação não pode ser desfeita.</div>
+    <div class="conf-title" id="conf-title">Excluir projeto?</div>
+    <div class="conf-msg" id="conf-msg">Esta ação não pode ser desfeita.</div>
+    <div class="conf-details" id="conf-details"></div>
     <div class="conf-actions">
       <button class="btn btn-secondary" onclick="closeConf()">Cancelar</button>
-      <button class="btn btn-danger" onclick="doDelete()">Excluir</button>
+      <button class="btn btn-danger" id="conf-btn" onclick="doConfirm()">Excluir</button>
     </div>
   </div>
 </div>
+<!-- TOAST -->
 <div class="toast-wrap" id="toasts"></div>
 <script src="script.js"></script>
 </body>
