@@ -1,11 +1,11 @@
 <div align="center">
 
-  <h1>Sleep Cycle</h1>
-  <p><b>Designed to calculate the best times to sleep and wake up refreshed, based on basic sleep cycle calculations. Includes reports to track sleep and its characteristics.</b></p>
+  <h1>Project Hub</h1>
+  <p><b>Created to manage and administer various projects, it functions as a project library, with updates and progress tracking.</b></p>
 
-  <!--<img src="https://img.shields.io/badge/Status-Planning-lightgrey?style=for-the-badge&logo=blueprint" alt="Planning">-->
+  <img src="https://img.shields.io/badge/Status-Planning-lightgrey?style=for-the-badge&logo=blueprint" alt="Planning">
   <!-- <img src="https://img.shields.io/badge/Status-Developing-orange?style=for-the-badge&logo=visualstudiocode" alt="Developing"> -->
-  <img src="https://img.shields.io/badge/Status-Completed-brightgreen?style=for-the-badge&logo=checkmarx" alt="Completed"> 
+  <!--<img src="https://img.shields.io/badge/Status-Completed-brightgreen?style=for-the-badge&logo=checkmarx" alt="Completed"> -->
   <!-- <img src="https://img.shields.io/badge/Status-Maintenance-blue?style=for-the-badge&logo=wrench" alt="Maintenance"> -->
 
   <br>
@@ -18,7 +18,6 @@
     <a href="#configuration">Configuration</a> •
     <a href="#installation">Installation</a> •
     <a href="#usage">Usage</a> •
-    <a href="#license">License</a> •
     <a href="#contact">Contact</a>
   </p>
 </div>
@@ -27,17 +26,19 @@
 
 ## About
 
-The **Sleep Cycle** app was developed to indicate sleep and wake times, based on the science of the sleep cycle, so that the user can wake up feeling refreshed. It also contains reports on sleep and its characteristics.
+The **Project Hub** it was designed to meet the need to record personal projects, with progress visualization for real-time updates, allowing for better control of a personal portfolio.
 >**Why this project?**  
->Waking up feeling refreshed is a problem for many people, and this is greatly influenced by sleep, both in terms of duration and quality. The sleep cycle helps determine the best times to base a night's sleep on.
+>Having project management and control skills is fundamental for organization and skill improvement.
 
 ---
 
 ## Features
 
-- [x] **Choosing a bedtime**
-- [x] **Discover the best times to wake up based on your current sleep schedule**
-- [x] **Reports on the user's sleep**
+- [ ] **Field to add projects, which go to a library with various filter options**
+- [ ] **Updated dashboard with information collected from the projects**
+- [ ] **Kanban board with classification by status**
+- [ ] **Timeline with deadline dates**
+- [ ] **Home page with projects, where it is possible to add links, tasks and notes, among other project information**
 
 ---
 
@@ -66,8 +67,8 @@ There are no advanced settings.
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/15LUCASARAUJO/sleep-cycle.git
-cd Rating-content-indicator
+git clone https://github.com/15LUCASARAUJO/Project-Hub.git
+cd Project-Hub
 ```
 
 ---
