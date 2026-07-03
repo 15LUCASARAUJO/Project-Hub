@@ -11,7 +11,32 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="app" id="app">
+<!-- TELA DE LOGIN -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-box">
+    <div class="auth-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      </div>
+      <span class="brand-name">ProjectHub</span>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Entrar</button>
+      <button class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Criar conta</button>
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Email</label>
+      <input class="fin" id="auth-email" type="email" placeholder="voce@email.com" autocomplete="email">
+    </div>
+    <div class="fgroup">
+      <label class="flabel">Senha</label>
+      <input class="fin" id="auth-password" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+    <div class="auth-error" id="auth-error"></div>
+    <button class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;margin-top:4px" onclick="submitAuth()">Entrar</button>
+  </div>
+</div>
+<div class="app" id="app" style="display:none">
   <div class="sidebar-ov" id="sidebar-ov" onclick="closeSidebar()"></div>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -48,6 +73,10 @@
       <button class="dm-btn" onclick="toggleDark()">
         <svg id="dm-icon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
         <span id="dm-label">Modo escuro</span>
+      </button>
+      <button class="dm-btn" onclick="logout()">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Sair</span>
       </button>
       <div style="height:8px"></div>
       <button class="btn-new" onclick="openNewProject()">
@@ -155,6 +184,12 @@
 </div>
 <!-- TOAST -->
 <div class="toast-wrap" id="toasts"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  const SUPABASE_URL = 'https://qqqlemmsvlurdqzbobyv.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_t1ag83ySlo5J3RmEBk42lw_LotXCBLD';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+</script>
 <script src="script.js"></script>
 </body>
 </html>
