@@ -16,21 +16,32 @@ async function submitAuth(){
   const email=document.getElementById('auth-email').value.trim();
   const password=document.getElementById('auth-password').value;
   const errEl=document.getElementById('auth-error');
+  errEl.style.color='var(--red)';
   errEl.textContent='';
   if(!email||!password){errEl.textContent='Preencha email e senha.';return;}
+  if(typeof supabase==='undefined'||!supabase.auth){
+    errEl.textContent='Erro: biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.';
+    return;
+  }
   const btn=document.getElementById('auth-submit');
   btn.disabled=true;btn.textContent='Aguarde...';
-  let result;
-  if(AUTH_MODE==='login'){
-    result=await supabase.auth.signInWithPassword({email,password});
-  }else{
-    result=await supabase.auth.signUp({email,password});
-  }
-  btn.disabled=false;btn.textContent=AUTH_MODE==='login'?'Entrar':'Criar conta';
-  if(result.error){errEl.textContent=result.error.message;return;}
-  if(AUTH_MODE==='signup'&&!result.data.session){
-    errEl.style.color='var(--green)';
-    errEl.textContent='Conta criada! Verifique seu email para confirmar, ou faça login.';
+  try{
+    let result;
+    if(AUTH_MODE==='login'){
+      result=await supabase.auth.signInWithPassword({email,password});
+    }else{
+      result=await supabase.auth.signUp({email,password});
+    }
+    if(result.error){errEl.textContent=result.error.message;return;}
+    if(AUTH_MODE==='signup'&&!result.data.session){
+      errEl.style.color='var(--green)';
+      errEl.textContent='Conta criada! Verifique seu email para confirmar, ou faça login.';
+    }
+  }catch(err){
+    console.error('Erro de autenticação:',err);
+    errEl.textContent='Erro de conexão: '+(err.message||'não foi possível falar com o Supabase.');
+  }finally{
+    btn.disabled=false;btn.textContent=AUTH_MODE==='login'?'Entrar':'Criar conta';
   }
 }
 function logout(){supabase.auth.signOut();}
