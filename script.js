@@ -1,11 +1,78 @@
 const COLORS=['#1a1917','#2d6a4f','#1e3a5f','#7c3aed','#b45309','#be185d','#0369a1','#047857','#dc2626','#6d28d9'];
 let S={projects:[],view:'dashboard',proj:null,editing:null,deleting:null,filter:'all',search:'',sort:'createdAt',color:COLORS[0],dragId:null,viewMode:'grid',kFilter:'all',confirmCb:null};
-function ld(){
-  try{const d=localStorage.getItem('ph3');if(d){const p=JSON.parse(d);S.projects=p.projects||[];}}catch(e){}
-  try{const th=localStorage.getItem('ph-theme');if(th)document.documentElement.setAttribute('data-theme',th);}catch(e){}
-  updateDmUI();
+const FIELD_MAP={startDate:'start_date',endDate:'end_date'};
+let AUTH_MODE='login';
+let realtimeStarted=false;
+
+/* ===== AUTENTICAÇÃO ===== */
+function switchAuthTab(mode){
+  AUTH_MODE=mode;
+  document.getElementById('auth-tab-login').classList.toggle('active',mode==='login');
+  document.getElementById('auth-tab-signup').classList.toggle('active',mode==='signup');
+  document.getElementById('auth-submit').textContent=mode==='login'?'Entrar':'Criar conta';
+  document.getElementById('auth-error').textContent='';
 }
-function sv(){try{localStorage.setItem('ph3',JSON.stringify({projects:S.projects}));}catch(e){}}
+async function submitAuth(){
+  const email=document.getElementById('auth-email').value.trim();
+  const password=document.getElementById('auth-password').value;
+  const errEl=document.getElementById('auth-error');
+  errEl.textContent='';
+  if(!email||!password){errEl.textContent='Preencha email e senha.';return;}
+  const btn=document.getElementById('auth-submit');
+  btn.disabled=true;btn.textContent='Aguarde...';
+  let result;
+  if(AUTH_MODE==='login'){
+    result=await supabase.auth.signInWithPassword({email,password});
+  }else{
+    result=await supabase.auth.signUp({email,password});
+  }
+  btn.disabled=false;btn.textContent=AUTH_MODE==='login'?'Entrar':'Criar conta';
+  if(result.error){errEl.textContent=result.error.message;return;}
+  if(AUTH_MODE==='signup'&&!result.data.session){
+    errEl.style.color='var(--green)';
+    errEl.textContent='Conta criada! Verifique seu email para confirmar, ou faça login.';
+  }
+}
+function logout(){supabase.auth.signOut();}
+async function showApp(){
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  await fetchProjects();
+  if(!realtimeStarted){setupRealtime();realtimeStarted=true;}
+}
+function showAuth(){
+  document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('app').style.display='none';
+  realtimeStarted=false;
+}
+supabase.auth.onAuthStateChange((event,session)=>{
+  if(session)showApp();else showAuth();
+});
+
+/* ===== DADOS (Supabase) ===== */
+function mapProjectFromDB(p){
+  return{
+    id:p.id,name:p.name,description:p.description,category:p.category,
+    status:p.status,priority:p.priority,progress:p.progress,
+    startDate:p.start_date,endDate:p.end_date,color:p.color,notes:p.notes,
+    createdAt:p.created_at?new Date(p.created_at).getTime():null,
+    tasks:(p.tasks||[]).map(t=>({id:t.id,text:t.text,done:t.done,due:t.due})).sort((a,b)=>(a.id>b.id?1:-1)),
+    links:(p.links||[]).map(l=>({id:l.id,title:l.title,url:l.url}))
+  };
+}
+async function fetchProjects(){
+  const{data,error}=await supabase.from('projects').select('*, tasks(*), links(*)').order('created_at',{ascending:false});
+  if(error){toast('Erro ao carregar projetos');console.error(error);return;}
+  S.projects=data.map(mapProjectFromDB);
+  renderSB();renderMain();
+}
+function setupRealtime(){
+  supabase.channel('db-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'projects'},()=>fetchProjects())
+    .on('postgres_changes',{event:'*',schema:'public',table:'tasks'},()=>fetchProjects())
+    .on('postgres_changes',{event:'*',schema:'public',table:'links'},()=>fetchProjects())
+    .subscribe();
+}
 function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
 function toggleDark(){
   const cur=document.documentElement.getAttribute('data-theme');
@@ -266,7 +333,7 @@ function kcHTML(p){
 function kStart(e,id){S.dragId=id;setTimeout(()=>document.getElementById('kcard-'+id)?.classList.add('dragging'),0);e.dataTransfer.effectAllowed='move';}
 function kOver(e,id){e.preventDefault();document.querySelectorAll('.kdrop').forEach(z=>z.classList.remove('over'));document.getElementById('kd-'+id)?.classList.add('over');}
 function kLeave(e){e.currentTarget.classList.remove('over');}
-function kDrop(e,id){e.preventDefault();document.querySelectorAll('.kdrop').forEach(z=>z.classList.remove('over'));if(!S.dragId)return;const p=S.projects.find(x=>x.id===S.dragId);if(p){p.status=id;sv();toast('Projeto movido');renderMain();}S.dragId=null;}
+async function kDrop(e,id){e.preventDefault();document.querySelectorAll('.kdrop').forEach(z=>z.classList.remove('over'));if(!S.dragId)return;await supabase.from('projects').update({status:id}).eq('id',S.dragId);toast('Projeto movido');S.dragId=null;fetchProjects();}
 function initTouchDrag(){
   let touchCard=null,touchCol=null,startX=0,startY=0,clone=null;
   document.querySelectorAll('.kcard').forEach(card=>{
@@ -286,10 +353,13 @@ function initTouchDrag(){
       document.querySelectorAll('.kdrop').forEach(z=>z.classList.remove('over'));
       if(drop){drop.classList.add('over');touchCol=drop.id.replace('kd-','');}
     },{passive:false});
-    card.addEventListener('touchend',()=>{
+    card.addEventListener('touchend',async()=>{
       if(clone){clone.remove();clone=null;}
       document.querySelectorAll('.kdrop').forEach(z=>z.classList.remove('over'));
-      if(touchCard&&touchCol){const p=S.projects.find(x=>x.id===touchCard);if(p&&p.status!==touchCol){p.status=touchCol;sv();toast('Projeto movido');renderMain();}}
+      if(touchCard&&touchCol){
+        const p=S.projects.find(x=>x.id===touchCard);
+        if(p&&p.status!==touchCol){await supabase.from('projects').update({status:touchCol}).eq('id',touchCard);toast('Projeto movido');fetchProjects();}
+      }
       touchCard=null;touchCol=null;
     });
   });
@@ -404,7 +474,7 @@ function rDetail(el){
           <div class="mfield"><div class="mlabel">Status</div><select class="msel" onchange="updField('${p.id}','status',this.value);syncProgress('${p.id}')"><option value="active" ${p.status==='active'?'selected':''}>Em andamento</option><option value="paused" ${p.status==='paused'?'selected':''}>Pausado</option><option value="done" ${p.status==='done'?'selected':''}>Concluído</option><option value="archived" ${p.status==='archived'?'selected':''}>Arquivado</option></select></div>
           <div class="mfield"><div class="mlabel">Prioridade</div><select class="msel" onchange="updField('${p.id}','priority',this.value)"><option value="high" ${p.priority==='high'?'selected':''}>Alta</option><option value="medium" ${p.priority==='medium'?'selected':''}>Média</option><option value="low" ${p.priority==='low'?'selected':''}>Baixa</option></select></div>
           <div class="mfield"><div class="mlabel">Categoria</div><input class="min" value="${esc(p.category||'')}" placeholder="Ex: Web..." onchange="updField('${p.id}','category',this.value)"></div>
-          <div class="mfield"><div class="mlabel">Progresso (%)</div><input class="min" type="number" min="0" max="100" value="${p.progress||0}" onchange="updField('${p.id}','progress',parseInt(this.value)||0);syncProgressBar()"></div>
+          <div class="mfield"><div class="mlabel">Progresso (%)</div><input class="min" type="number" min="0" max="100" value="${p.progress||0}" onchange="updField('${p.id}','progress',parseInt(this.value)||0)"></div>
           <div class="mfield"><div class="mlabel">Início</div><input class="min" type="date" value="${p.startDate||''}" onchange="updField('${p.id}','startDate',this.value)"></div>
           <div class="mfield"><div class="mlabel">Prazo</div><input class="min" type="date" value="${p.endDate||''}" onchange="updField('${p.id}','endDate',this.value)"></div>
           ${p.endDate?`<div class="mfield"><div class="mlabel">Restam</div><div style="font-size:13px;font-family:'DM Mono',monospace;color:${isOverdue(p)?'var(--red)':'var(--text)'}">${daysLeft(p.endDate)}</div></div>`:''}
@@ -435,43 +505,48 @@ function rDetail(el){
     if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();saveNotes(p.id);}
   });
 }
-function syncProgress(pid){
+async function syncProgress(pid){
   const p=S.projects.find(x=>x.id===pid);if(!p)return;
-  if(p.status==='done'){p.progress=100;sv();}
-  const el=document.querySelector('.min[type=number]');if(el)el.value=p.progress;
-  syncProgressBar();
-}
-function syncProgressBar(){
-  const pid=S.proj;const p=S.projects.find(x=>x.id===pid);if(!p)return;
-  const bar=document.querySelector('.pbar-fill');const pct=document.querySelector('span[style*="DM Mono"]');
-  if(bar)bar.style.width=(p.progress||0)+'%';
+  if(p.status==='done'){await supabase.from('projects').update({progress:100}).eq('id',pid);fetchProjects();}
 }
 function actRow(l,v){return`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">${l}</span><span style="font-weight:600;font-family:'DM Mono',monospace">${v}</span></div>`}
 function tHTML(pid,t){
   const now=new Date();const isOd=t.due&&!t.done&&new Date(t.due+'T23:59:59')<now;
   return`<div class="task-item"><div class="tcheck ${t.done?'done':''}" onclick="toggleTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ttxt ${t.done?'done':''}">${esc(t.text)}</span>${t.due?`<span class="task-due ${isOd?'overdue':''}">${fmtDate(t.due)}</span>`:''}<button class="tdel" onclick="delTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`
 }
-function addTask(pid){
+async function addTask(pid){
   const inp=document.getElementById('newtask');const txt=inp?.value.trim();if(!txt)return;
   const dateInp=document.getElementById('newtask-date');const due=dateInp?.value||null;
-  const p=S.projects.find(x=>x.id===pid);if(!p)return;
-  if(!p.tasks)p.tasks=[];p.tasks.push({id:gid(),text:txt,done:false,due});
-  sv();inp.value='';if(dateInp)dateInp.value='';renderMain();
+  const{error}=await supabase.from('tasks').insert({project_id:pid,text:txt,done:false,due});
+  if(error){toast('Erro ao adicionar tarefa');console.error(error);return;}
+  inp.value='';if(dateInp)dateInp.value='';fetchProjects();
 }
-function toggleTask(pid,tid){
+async function toggleTask(pid,tid){
   const p=S.projects.find(x=>x.id===pid);if(!p)return;
   const t=(p.tasks||[]).find(x=>x.id===tid);if(!t)return;
-  t.done=!t.done;
-  const dc=p.tasks.filter(t=>t.done).length;
-  p.progress=p.tasks.length?Math.round(dc/p.tasks.length*100):p.progress;
-  sv();renderMain();
+  const newDone=!t.done;
+  await supabase.from('tasks').update({done:newDone}).eq('id',tid);
+  const doneCount=p.tasks.filter(x=>x.id===tid?newDone:x.done).length;
+  const newProgress=p.tasks.length?Math.round(doneCount/p.tasks.length*100):p.progress;
+  await supabase.from('projects').update({progress:newProgress}).eq('id',pid);
+  fetchProjects();
 }
-function delTask(pid,tid){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.tasks=(p.tasks||[]).filter(t=>t.id!==tid);sv();renderMain();}
+async function delTask(pid,tid){await supabase.from('tasks').delete().eq('id',tid);fetchProjects();}
 function switchTab(tab){['tasks','notes','links'].forEach(t=>{document.getElementById('t-'+t)?.classList.remove('active');const c=document.getElementById('tc-'+t);if(c)c.style.display='none';});document.getElementById('t-'+tab)?.classList.add('active');const c=document.getElementById('tc-'+tab);if(c)c.style.display='block';}
-function saveNotes(pid){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.notes=document.getElementById('notesed')?.value||'';sv();const m=document.getElementById('notes-ok');if(m){m.textContent='Salvo!';setTimeout(()=>{m.textContent=''},2000);}}
+async function saveNotes(pid){
+  const val=document.getElementById('notesed')?.value||'';
+  const p=S.projects.find(x=>x.id===pid);if(p)p.notes=val;
+  const{error}=await supabase.from('projects').update({notes:val}).eq('id',pid);
+  const m=document.getElementById('notes-ok');
+  if(m){m.textContent=error?'Erro ao salvar':'Salvo!';setTimeout(()=>{m.textContent='';},2000);}
+}
 function lHTML(pid,l){return`<div class="link-item"><div class="link-favicon">🔗</div><div class="link-info"><div class="link-title"><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title||l.url)}</a></div><div class="link-url">${esc(l.url)}</div></div><button class="link-del" onclick="delLink('${pid}','${l.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`}
-function addLink(pid){const t=document.getElementById('ltitle')?.value.trim();const u=document.getElementById('lurl')?.value.trim();if(!u)return;const p=S.projects.find(x=>x.id===pid);if(!p)return;if(!p.links)p.links=[];p.links.push({id:gid(),title:t||u,url:u});sv();renderMain();setTimeout(()=>switchTab('links'),10);}
-function delLink(pid,lid){const p=S.projects.find(x=>x.id===pid);if(!p)return;p.links=(p.links||[]).filter(l=>l.id!==lid);sv();renderMain();setTimeout(()=>switchTab('links'),10);}
+async function addLink(pid){
+  const t=document.getElementById('ltitle')?.value.trim();const u=document.getElementById('lurl')?.value.trim();if(!u)return;
+  await supabase.from('links').insert({project_id:pid,title:t||u,url:u});
+  fetchProjects();setTimeout(()=>switchTab('links'),10);
+}
+async function delLink(pid,lid){await supabase.from('links').delete().eq('id',lid);fetchProjects();setTimeout(()=>switchTab('links'),10);}
 function exportProj(pid){const p=S.projects.find(x=>x.id===pid);if(!p)return;const blob=new Blob([JSON.stringify(p,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=p.name.replace(/\s+/g,'_')+'.json';a.click();URL.revokeObjectURL(a.href);toast('Exportado com sucesso');}
 function copyResume(pid){
   const p=S.projects.find(x=>x.id===pid);if(!p)return;
@@ -488,11 +563,12 @@ function copyResume(pid){
   ].filter(Boolean);
   try{navigator.clipboard.writeText(lines.join('\n'));toast('Resumo copiado!');}catch(e){toast('Não foi possível copiar');}
 }
-function archiveProj(pid){
+async function archiveProj(pid){
   const p=S.projects.find(x=>x.id===pid);if(!p)return;
-  if(p.status==='archived'){p.status='active';sv();toast('Projeto reativado');renderMain();}
-  else{p.status='archived';sv();toast('Projeto arquivado');navigate('projects');}
-  renderSB();
+  const newStatus=p.status==='archived'?'active':'archived';
+  await supabase.from('projects').update({status:newStatus}).eq('id',pid);
+  toast(newStatus==='archived'?'Projeto arquivado':'Projeto reativado');
+  if(newStatus==='archived')navigate('projects');else fetchProjects();
 }
 function openNewProject(st,cat){
   S.editing=null;
@@ -528,12 +604,30 @@ function openEditProject(id){
 function rCPicker(){document.getElementById('cpicker').innerHTML=COLORS.map(c=>`<div class="cswatch ${c===S.color?'sel':''}" style="background:${c}" onclick="selColor('${c}')"></div>`).join('');}
 function selColor(c){S.color=c;rCPicker();}
 function closeModal(){document.getElementById('proj-modal').classList.remove('open');}
-function saveProject(){
+async function saveProject(){
   const name=document.getElementById('f-name').value.trim();if(!name){document.getElementById('f-name').focus();return;}
-  const d={name,description:document.getElementById('f-desc').value.trim(),category:document.getElementById('f-cat').value.trim(),status:document.getElementById('f-status').value,priority:document.getElementById('f-priority').value,progress:parseInt(document.getElementById('f-progress').value)||0,startDate:document.getElementById('f-start').value,endDate:document.getElementById('f-end').value,color:S.color};
-  if(S.editing){const i=S.projects.findIndex(p=>p.id===S.editing);if(i!==-1)S.projects[i]={...S.projects[i],...d};toast('Projeto atualizado');}
-  else{S.projects.unshift({...d,id:gid(),createdAt:Date.now(),tasks:[],links:[],notes:''});toast('Projeto criado');}
-  sv();closeModal();renderSB();renderMain();
+  const d={
+    name,
+    description:document.getElementById('f-desc').value.trim(),
+    category:document.getElementById('f-cat').value.trim(),
+    status:document.getElementById('f-status').value,
+    priority:document.getElementById('f-priority').value,
+    progress:parseInt(document.getElementById('f-progress').value)||0,
+    start_date:document.getElementById('f-start').value||null,
+    end_date:document.getElementById('f-end').value||null,
+    color:S.color
+  };
+  if(S.editing){
+    const{error}=await supabase.from('projects').update(d).eq('id',S.editing);
+    if(error){toast('Erro ao atualizar projeto');console.error(error);return;}
+    toast('Projeto atualizado');
+  }else{
+    const{data:{user}}=await supabase.auth.getUser();
+    const{error}=await supabase.from('projects').insert({...d,user_id:user.id});
+    if(error){toast('Erro ao criar projeto');console.error(error);return;}
+    toast('Projeto criado');
+  }
+  closeModal();fetchProjects();
 }
 function showConf(title,msg,details,btnLabel,cb){
   document.getElementById('conf-title').textContent=title;
@@ -553,8 +647,18 @@ function askDel(id){
   const details=`Projeto: "${p.name}"\n${tasks} tarefa(s)  •  ${links} link(s)  •  notas`;
   showConf('Excluir projeto?','Esta ação não pode ser desfeita.',details,'Excluir',doDelete);
 }
-function doDelete(){if(!S.deleting)return;S.projects=S.projects.filter(p=>p.id!==S.deleting);sv();toast('Projeto excluído');navigate('projects');}
-function updField(id,f,v){const p=S.projects.find(x=>x.id===id);if(!p)return;p[f]=v;sv();renderSB();}
+async function doDelete(){
+  if(!S.deleting)return;
+  const{error}=await supabase.from('projects').delete().eq('id',S.deleting);
+  if(error){toast('Erro ao excluir projeto');console.error(error);return;}
+  toast('Projeto excluído');navigate('projects');
+}
+async function updField(id,f,v){
+  const dbField=FIELD_MAP[f]||f;
+  const{error}=await supabase.from('projects').update({[dbField]:v||null}).eq('id',id);
+  if(error){toast('Erro ao salvar alteração');console.error(error);return;}
+  fetchProjects();
+}
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 function fmtDate(s){if(!s)return'';const d=new Date(s+'T00:00:00');return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});}
 function daysLeft(e){if(!e)return'—';const d=Math.ceil((new Date(e+'T00:00:00')-new Date())/86400000);if(d<0)return`${Math.abs(d)}d atrasado`;if(d===0)return'Hoje!';return`${d} dias`;}
@@ -574,6 +678,11 @@ document.addEventListener('keydown',e=>{
 document.getElementById('proj-modal').addEventListener('click',function(e){if(e.target===this)closeModal();});
 document.getElementById('conf-ov').addEventListener('click',function(e){if(e.target===this)closeConf();});
 window.addEventListener('resize',()=>{if(window.innerWidth>767)closeSidebar();});
-ld();
-renderSB();
-renderMain();
+
+/* ===== INICIALIZAÇÃO ===== */
+(async function init(){
+  try{const th=localStorage.getItem('ph-theme');if(th)document.documentElement.setAttribute('data-theme',th);}catch(e){}
+  updateDmUI();
+  const{data:{session}}=await supabase.auth.getSession();
+  if(session)showApp();else showAuth();
+})();
