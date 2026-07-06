@@ -19,7 +19,7 @@ async function submitAuth(){
   errEl.style.color='var(--red)';
   errEl.textContent='';
   if(!email||!password){errEl.textContent='Preencha email e senha.';return;}
-  if(typeof supabase==='undefined'||!supabase.auth){
+  if(typeof supabase==='undefined'||!supabase||!supabase.auth){
     errEl.textContent='Erro: biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.';
     return;
   }
@@ -44,7 +44,7 @@ async function submitAuth(){
     btn.disabled=false;btn.textContent=AUTH_MODE==='login'?'Entrar':'Criar conta';
   }
 }
-function logout(){supabase.auth.signOut();}
+function logout(){if(typeof supabase!=='undefined'&&supabase)supabase.auth.signOut();}
 async function showApp(){
   document.getElementById('auth-screen').style.display='none';
   document.getElementById('app').style.display='flex';
@@ -56,9 +56,11 @@ function showAuth(){
   document.getElementById('app').style.display='none';
   realtimeStarted=false;
 }
-supabase.auth.onAuthStateChange((event,session)=>{
-  if(session)showApp();else showAuth();
-});
+if(typeof supabase!=='undefined'&&supabase&&supabase.auth){
+  supabase.auth.onAuthStateChange((event,session)=>{
+    if(session)showApp();else showAuth();
+  });
+}
 
 /* ===== DADOS (Supabase) ===== */
 function mapProjectFromDB(p){
@@ -694,6 +696,10 @@ window.addEventListener('resize',()=>{if(window.innerWidth>767)closeSidebar();})
 (async function init(){
   try{const th=localStorage.getItem('ph-theme');if(th)document.documentElement.setAttribute('data-theme',th);}catch(e){}
   updateDmUI();
+  if(typeof supabase==='undefined'||!supabase||!supabase.auth){
+    showAuth();
+    return;
+  }
   const{data:{session}}=await supabase.auth.getSession();
   if(session)showApp();else showAuth();
 })();
