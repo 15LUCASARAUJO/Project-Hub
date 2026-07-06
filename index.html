@@ -184,12 +184,35 @@
 </div>
 <!-- TOAST -->
 <div class="toast-wrap" id="toasts"></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  const SUPABASE_URL = 'https://qqqlemmsvlurdqzbobyv.supabase.co';
-  const SUPABASE_KEY = 'sb_publishable_t1ag83ySlo5J3RmEBk42lw_LotXCBLD';
-  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+(async function boot(){
+  const SUPABASE_URL='https://qqqlemmsvlurdqzbobyv.supabase.co';
+  const SUPABASE_KEY='sb_publishable_t1ag83ySlo5J3RmEBk42lw_LotXCBLD';
+  function loadScript(src){
+    return new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src=src;s.onload=resolve;s.onerror=reject;
+      document.head.appendChild(s);
+    });
+  }
+  let lib=null;
+  try{
+    await loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2');
+    lib=window.supabase;
+  }catch(e){
+    console.warn('CDN principal falhou, tentando alternativo...');
+  }
+  if(!lib){
+    try{
+      await loadScript('https://unpkg.com/@supabase/supabase-js@2');
+      lib=window.supabase;
+    }catch(e2){
+      console.error('Nenhum CDN do Supabase carregou.',e2);
+    }
+  }
+  window.supabase = lib ? lib.createClient(SUPABASE_URL,SUPABASE_KEY) : undefined;
+  await loadScript('script.js');
+})();
 </script>
-<script src="script.js"></script>
 </body>
 </html>
