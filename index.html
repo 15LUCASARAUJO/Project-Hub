@@ -36,6 +36,35 @@
     <button class="btn btn-primary" id="auth-submit" style="width:100%;justify-content:center;margin-top:4px" onclick="submitAuth()">Entrar</button>
   </div>
 </div>
+<!-- TELA DE USERNAME -->
+<div class="auth-screen" id="username-screen" style="display:none">
+  <div class="auth-box">
+    <div class="auth-brand"><span class="brand-name">Escolha seu nome de usuário</span></div>
+    <div class="fgroup">
+      <label class="flabel">Outras pessoas vão usar isso pra te convidar</label>
+      <input class="fin" id="username-input" placeholder="ex: lucas_dev" onkeydown="if(event.key==='Enter')submitUsername()">
+    </div>
+    <div class="auth-error" id="username-error"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="submitUsername()">Confirmar</button>
+  </div>
+</div>
+<!-- BARRA DE CONVITES -->
+<div class="invites-bar" id="invites-bar" style="display:none"></div>
+<!-- MODAL COMPARTILHAR -->
+<div class="modal-ov" id="share-modal">
+  <div class="modal">
+    <span class="modal-drag"></span>
+    <div class="modal-title">Compartilhar projeto</div>
+    <div class="frow">
+      <div class="fgroup"><input class="fin" id="share-username" placeholder="nome de usuário"></div>
+      <div class="fgroup"><select class="fin" id="share-role"><option value="editor">Editor</option><option value="viewer">Visualizador</option></select></div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-bottom:6px" onclick="inviteUser()">Convidar</button>
+    <div class="auth-error" id="share-error"></div>
+    <div id="share-list" style="margin-top:10px;display:flex;flex-direction:column;gap:6px"></div>
+    <div class="modal-actions"><button class="btn btn-secondary" onclick="closeShareModal()">Fechar</button></div>
+  </div>
+</div>
 <div class="app" id="app" style="display:none">
   <div class="sidebar-ov" id="sidebar-ov" onclick="closeSidebar()"></div>
   <aside class="sidebar" id="sidebar">
