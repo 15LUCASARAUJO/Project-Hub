@@ -3,6 +3,7 @@ let S={projects:[],view:'dashboard',proj:null,editing:null,deleting:null,filter:
 const FIELD_MAP={startDate:'start_date',endDate:'end_date'};
 let AUTH_MODE='login';
 let realtimeStarted=false;
+let CURRENT_USER=null;
 
 /* ===== AUTENTICAÇÃO ===== */
 function switchAuthTab(mode){
@@ -19,7 +20,7 @@ async function submitAuth(){
   errEl.style.color='var(--red)';
   errEl.textContent='';
   if(!email||!password){errEl.textContent='Preencha email e senha.';return;}
-  if(typeof supabase==='undefined'||!supabase||!supabase.auth){
+  if(typeof supabase==='undefined'||!supabase.auth){
     errEl.textContent='Erro: biblioteca do Supabase não carregou. Verifique sua conexão e recarregue a página.';
     return;
   }
@@ -44,17 +45,38 @@ async function submitAuth(){
     btn.disabled=false;btn.textContent=AUTH_MODE==='login'?'Entrar':'Criar conta';
   }
 }
-function logout(){if(typeof supabase!=='undefined'&&supabase)supabase.auth.signOut();}
+function logout(){supabase.auth.signOut();}
 async function showApp(){
+  const{data:{user}}=await supabase.auth.getUser();
+  CURRENT_USER=user;
+  const{data:profile}=await supabase.from('profiles').select('username').eq('id',user.id).maybeSingle();
+  if(!profile){
+    document.getElementById('auth-screen').style.display='none';
+    document.getElementById('username-screen').style.display='flex';
+    return;
+  }
   document.getElementById('auth-screen').style.display='none';
+  document.getElementById('username-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   await fetchProjects();
+  await fetchInvites();
   if(!realtimeStarted){setupRealtime();realtimeStarted=true;}
 }
 function showAuth(){
   document.getElementById('auth-screen').style.display='flex';
+  document.getElementById('username-screen').style.display='none';
   document.getElementById('app').style.display='none';
   realtimeStarted=false;
+}
+async function submitUsername(){
+  const input=document.getElementById('username-input');
+  const errEl=document.getElementById('username-error');
+  const u=input.value.trim().toLowerCase();
+  errEl.textContent='';
+  if(!/^[a-z0-9_]{3,20}$/.test(u)){errEl.textContent='Use 3-20 letras/números/underline, sem espaços.';return;}
+  const{error}=await supabase.from('profiles').insert({id:CURRENT_USER.id,username:u});
+  if(error){errEl.textContent=error.message.includes('duplicate')?'Esse nome de usuário já existe.':error.message;return;}
+  showApp();
 }
 if(typeof supabase!=='undefined'&&supabase&&supabase.auth){
   supabase.auth.onAuthStateChange((event,session)=>{
@@ -68,22 +90,48 @@ function mapProjectFromDB(p){
     id:p.id,name:p.name,description:p.description,category:p.category,
     status:p.status,priority:p.priority,progress:p.progress,
     startDate:p.start_date,endDate:p.end_date,color:p.color,notes:p.notes,
+    ownerId:p.user_id,
     createdAt:p.created_at?new Date(p.created_at).getTime():null,
     tasks:(p.tasks||[]).map(t=>({id:t.id,text:t.text,done:t.done,due:t.due})).sort((a,b)=>(a.id>b.id?1:-1)),
-    links:(p.links||[]).map(l=>({id:l.id,title:l.title,url:l.url}))
+    links:(p.links||[]).map(l=>({id:l.id,title:l.title,url:l.url})),
+    shares:(p.project_shares||[]).map(s=>({id:s.id,userId:s.user_id,role:s.role,status:s.status}))
   };
 }
+function isOwner(p){return CURRENT_USER&&p.ownerId===CURRENT_USER.id;}
+function myRole(p){
+  if(isOwner(p))return'owner';
+  const s=(p.shares||[]).find(x=>x.userId===CURRENT_USER?.id&&x.status==='accepted');
+  return s?s.role:'viewer';
+}
+function canEdit(p){return myRole(p)!=='viewer';}
 async function fetchProjects(){
-  const{data,error}=await supabase.from('projects').select('*, tasks(*), links(*)').order('created_at',{ascending:false});
+  const{data,error}=await supabase.from('projects').select('*, tasks(*), links(*), project_shares(*)').order('created_at',{ascending:false});
   if(error){toast('Erro ao carregar projetos');console.error(error);return;}
   S.projects=data.map(mapProjectFromDB);
   renderSB();renderMain();
+}
+async function fetchInvites(){
+  const{data,error}=await supabase.from('project_shares').select('id,role,projects(name)').eq('user_id',CURRENT_USER.id).eq('status','pending');
+  if(error){console.error(error);return;}
+  renderInvites(data||[]);
+}
+function renderInvites(list){
+  const el=document.getElementById('invites-bar');if(!el)return;
+  if(!list.length){el.innerHTML='';el.style.display='none';return;}
+  el.style.display='flex';
+  el.innerHTML=list.map(i=>`<div class="invite-item">Convite para "<b>${esc(i.projects.name)}</b>" (${i.role==='editor'?'editor':'visualizador'}) <button class="btn btn-primary" style="padding:5px 10px" onclick="respondInvite('${i.id}',true)">Aceitar</button><button class="btn btn-secondary" style="padding:5px 10px" onclick="respondInvite('${i.id}',false)">Recusar</button></div>`).join('');
+}
+async function respondInvite(shareId,accept){
+  if(accept){await supabase.from('project_shares').update({status:'accepted'}).eq('id',shareId);}
+  else{await supabase.from('project_shares').delete().eq('id',shareId);}
+  fetchInvites();fetchProjects();
 }
 function setupRealtime(){
   supabase.channel('db-changes')
     .on('postgres_changes',{event:'*',schema:'public',table:'projects'},()=>fetchProjects())
     .on('postgres_changes',{event:'*',schema:'public',table:'tasks'},()=>fetchProjects())
     .on('postgres_changes',{event:'*',schema:'public',table:'links'},()=>fetchProjects())
+    .on('postgres_changes',{event:'*',schema:'public',table:'project_shares'},()=>{fetchProjects();fetchInvites();})
     .subscribe();
 }
 function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
@@ -425,19 +473,23 @@ function rDetail(el){
       <span class="topbar-title" style="display:flex;align-items:center;gap:6px;min-width:0"><span class="pdot" style="background:${p.color||'#1a1917'};flex-shrink:0"></span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}</span></span>
     </div>
     <div class="topbar-actions">
-      <button class="btn btn-secondary" onclick="openEditProject('${p.id}')">
+      ${isOwner(p)?`<button class="btn btn-secondary" onclick="openShareModal('${p.id}')" title="Compartilhar">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      </button>`:''}
+      ${canEdit(p)?`<button class="btn btn-secondary" onclick="openEditProject('${p.id}')">
         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         <span class="hide-xs">Editar</span>
       </button>
       <button class="btn btn-secondary" onclick="archiveProj('${p.id}')" title="${p.status==='archived'?'Desarquivar':'Arquivar'}">
         <svg viewBox="0 0 24 24"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
-      </button>
-      <button class="btn btn-secondary" style="color:var(--red)" onclick="askDel('${p.id}')">
+      </button>`:''}
+      ${isOwner(p)?`<button class="btn btn-secondary" style="color:var(--red)" onclick="askDel('${p.id}')">
         <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-      </button>
+      </button>`:''}
     </div>
   </div>
   <div class="content">
+    ${!isOwner(p)?`<div style="background:var(--surface2);border-radius:var(--r);padding:8px 14px;margin-bottom:16px;font-size:12px;color:var(--text2)">Compartilhado com você — ${canEdit(p)?'você pode editar':'somente visualização'}</div>`:''}
     ${od?`<div style="background:var(--red-bg);border:1px solid var(--red);border-radius:var(--r);padding:10px 14px;margin-bottom:16px;font-size:13px;color:var(--red);font-weight:500;display:flex;align-items:center;gap:8px"><svg width="14" height="14" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Este projeto está em atraso — prazo era ${fmtDate(p.endDate)}</div>`:''}
     <div class="detail-layout">
       <div class="detail-main">
@@ -455,30 +507,30 @@ function rDetail(el){
           <div class="tab" id="t-links" onclick="switchTab('links')" role="tab">Links (${links.length})</div>
         </div>
         <div id="tc-tasks">
-          ${tasks.map(t=>tHTML(p.id,t)).join('')}
-          <div class="add-task-row">
+          ${tasks.map(t=>tHTML(p.id,t,canEdit(p))).join('')}
+          ${canEdit(p)?`<div class="add-task-row">
             <input class="add-task-in" id="newtask" placeholder="Adicionar tarefa..." onkeydown="if(event.key==='Enter')addTask('${p.id}')">
             <input class="add-task-date" id="newtask-date" type="date" title="Prazo da tarefa">
             <button class="btn btn-primary" onclick="addTask('${p.id}')" style="min-width:44px;padding:10px">
               <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             </button>
-          </div>
+          </div>`:''}
         </div>
         <div id="tc-notes" style="display:none">
-          <textarea class="notes-ed" id="notesed" placeholder="Escreva anotações, decisões, links...">${esc(p.notes||'')}</textarea>
-          <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+          <textarea class="notes-ed" id="notesed" placeholder="Escreva anotações, decisões, links..." ${canEdit(p)?'':'readonly'}>${esc(p.notes||'')}</textarea>
+          ${canEdit(p)?`<div style="display:flex;gap:8px;margin-top:10px;align-items:center">
             <button class="btn btn-primary" onclick="saveNotes('${p.id}')">Salvar <span class="kbd" style="margin-left:4px">Ctrl+S</span></button>
             <span id="notes-ok" style="font-size:12px;color:var(--text3)"></span>
-          </div>
+          </div>`:''}
         </div>
         <div id="tc-links" style="display:none">
-          ${links.map(l=>lHTML(p.id,l)).join('')}
+          ${links.map(l=>lHTML(p.id,l,canEdit(p))).join('')}
           ${!links.length?`<div style="font-size:13px;color:var(--text3);margin-bottom:12px">Nenhum link ainda.</div>`:''}
-          <div class="add-link-form">
+          ${canEdit(p)?`<div class="add-link-form">
             <input id="ltitle" placeholder="Título (ex: Figma, Repositório...)">
             <input id="lurl" placeholder="URL (https://...)" onkeydown="if(event.key==='Enter')addLink('${p.id}')">
             <button class="btn btn-primary" style="align-self:flex-start" onclick="addLink('${p.id}')">Adicionar link</button>
-          </div>
+          </div>`:''}
         </div>
       </div>
       <div class="detail-side">
@@ -523,9 +575,9 @@ async function syncProgress(pid){
   if(p.status==='done'){await supabase.from('projects').update({progress:100}).eq('id',pid);fetchProjects();}
 }
 function actRow(l,v){return`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">${l}</span><span style="font-weight:600;font-family:'DM Mono',monospace">${v}</span></div>`}
-function tHTML(pid,t){
+function tHTML(pid,t,editable=true){
   const now=new Date();const isOd=t.due&&!t.done&&new Date(t.due+'T23:59:59')<now;
-  return`<div class="task-item"><div class="tcheck ${t.done?'done':''}" onclick="toggleTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ttxt ${t.done?'done':''}">${esc(t.text)}</span>${t.due?`<span class="task-due ${isOd?'overdue':''}">${fmtDate(t.due)}</span>`:''}<button class="tdel" onclick="delTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`
+  return`<div class="task-item"><div class="tcheck ${t.done?'done':''}" onclick="${editable?`toggleTask('${pid}','${t.id}')`:''}">${editable?'':'':''}<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ttxt ${t.done?'done':''}">${esc(t.text)}</span>${t.due?`<span class="task-due ${isOd?'overdue':''}">${fmtDate(t.due)}</span>`:''}${editable?`<button class="tdel" onclick="delTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`:''}</div>`
 }
 async function addTask(pid){
   const inp=document.getElementById('newtask');const txt=inp?.value.trim();if(!txt)return;
@@ -553,7 +605,7 @@ async function saveNotes(pid){
   const m=document.getElementById('notes-ok');
   if(m){m.textContent=error?'Erro ao salvar':'Salvo!';setTimeout(()=>{m.textContent='';},2000);}
 }
-function lHTML(pid,l){return`<div class="link-item"><div class="link-favicon">🔗</div><div class="link-info"><div class="link-title"><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title||l.url)}</a></div><div class="link-url">${esc(l.url)}</div></div><button class="link-del" onclick="delLink('${pid}','${l.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`}
+function lHTML(pid,l,editable=true){return`<div class="link-item"><div class="link-favicon">🔗</div><div class="link-info"><div class="link-title"><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title||l.url)}</a></div><div class="link-url">${esc(l.url)}</div></div>${editable?`<button class="link-del" onclick="delLink('${pid}','${l.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`:''}</div>`}
 async function addLink(pid){
   const t=document.getElementById('ltitle')?.value.trim();const u=document.getElementById('lurl')?.value.trim();if(!u)return;
   await supabase.from('links').insert({project_id:pid,title:t||u,url:u});
@@ -642,6 +694,35 @@ async function saveProject(){
   }
   closeModal();fetchProjects();
 }
+async function openShareModal(pid){
+  S.sharingProject=pid;
+  document.getElementById('share-modal').classList.add('open');
+  await renderShareList();
+}
+function closeShareModal(){document.getElementById('share-modal').classList.remove('open');S.sharingProject=null;}
+async function renderShareList(){
+  const pid=S.sharingProject;
+  const{data,error}=await supabase.from('project_shares').select('id,role,status,profiles(username)').eq('project_id',pid);
+  const el=document.getElementById('share-list');
+  if(error){el.innerHTML='Erro ao carregar.';return;}
+  el.innerHTML=(data&&data.length)?data.map(s=>`<div class="share-row"><span>${esc(s.profiles?.username||'?')}</span><span class="badge ${s.status==='accepted'?'b-active':'b-paused'}">${s.status==='accepted'?(s.role==='editor'?'Editor':'Visualizador'):'Pendente'}</span><button class="link-del" style="opacity:1" onclick="removeShare('${s.id}')"><svg viewBox="0 0 24 24" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>`).join(''):'<div style="font-size:13px;color:var(--text3)">Ninguém convidado ainda.</div>';
+}
+async function inviteUser(){
+  const pid=S.sharingProject;
+  const uname=document.getElementById('share-username').value.trim().toLowerCase();
+  const role=document.getElementById('share-role').value;
+  const errEl=document.getElementById('share-error');
+  errEl.textContent='';
+  if(!uname){errEl.textContent='Digite um nome de usuário.';return;}
+  const{data:prof,error:e1}=await supabase.from('profiles').select('id').eq('username',uname).maybeSingle();
+  if(e1||!prof){errEl.textContent='Usuário não encontrado.';return;}
+  if(prof.id===CURRENT_USER.id){errEl.textContent='Você já é o dono deste projeto.';return;}
+  const{error:e2}=await supabase.from('project_shares').insert({project_id:pid,user_id:prof.id,role,invited_by:CURRENT_USER.id});
+  if(e2){errEl.textContent=e2.message.includes('duplicate')?'Usuário já convidado.':e2.message;return;}
+  document.getElementById('share-username').value='';
+  toast('Convite enviado');renderShareList();
+}
+async function removeShare(shareId){await supabase.from('project_shares').delete().eq('id',shareId);renderShareList();fetchProjects();}
 function showConf(title,msg,details,btnLabel,cb){
   document.getElementById('conf-title').textContent=title;
   document.getElementById('conf-msg').textContent=msg;
