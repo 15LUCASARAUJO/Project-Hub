@@ -684,12 +684,12 @@ async function saveProject(){
   };
   if(S.editing){
     const{error}=await supabase.from('projects').update(d).eq('id',S.editing);
-    if(error){toast('Erro ao atualizar projeto');console.error(error);return;}
+    if(error){toast('Erro: '+error.message);console.error(error);return;}
     toast('Projeto atualizado');
   }else{
     const{data:{user}}=await supabase.auth.getUser();
     const{error}=await supabase.from('projects').insert({...d,user_id:user.id});
-    if(error){toast('Erro ao criar projeto');console.error(error);return;}
+    if(error){toast('Erro: '+error.message);console.error(error);return;}
     toast('Projeto criado');
   }
   closeModal();fetchProjects();
