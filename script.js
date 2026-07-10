@@ -577,7 +577,7 @@ async function syncProgress(pid){
 function actRow(l,v){return`<div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:var(--text2)">${l}</span><span style="font-weight:600;font-family:'DM Mono',monospace">${v}</span></div>`}
 function tHTML(pid,t,editable=true){
   const now=new Date();const isOd=t.due&&!t.done&&new Date(t.due+'T23:59:59')<now;
-  return`<div class="task-item"><div class="tcheck ${t.done?'done':''}" onclick="${editable?`toggleTask('${pid}','${t.id}')`:''}">${editable?'':'':''}<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ttxt ${t.done?'done':''}">${esc(t.text)}</span>${t.due?`<span class="task-due ${isOd?'overdue':''}">${fmtDate(t.due)}</span>`:''}${editable?`<button class="tdel" onclick="delTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`:''}</div>`
+  return`<div class="task-item"><div class="tcheck ${t.done?'done':''}" onclick="${editable?`toggleTask('${pid}','${t.id}')`:''}"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div><span class="ttxt ${t.done?'done':''}">${esc(t.text)}</span>${t.due?`<span class="task-due ${isOd?'overdue':''}">${fmtDate(t.due)}</span>`:''}${editable?`<button class="tdel" onclick="delTask('${pid}','${t.id}')"><svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`:''}</div>`
 }
 async function addTask(pid){
   const inp=document.getElementById('newtask');const txt=inp?.value.trim();if(!txt)return;
